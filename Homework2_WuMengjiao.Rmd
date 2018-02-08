@@ -1,0 +1,485 @@
+---
+title: "Homework 2"
+author: "Mengjiao Wu"
+date: "February 4, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+library(MASS)
+library(bbmle)
+knitr::opts_chunk$set(fig.width=6, fig.height=3.5)
+```
+
+# Question 1
+
+## Part (a)
+
+Log-likelihood function is:
+
+$$
+\begin{aligned}
+L(\theta) &= \prod_{i=1}^n\frac{1}{\pi[1+(x_i-\theta)^2]} \\
+&= (\frac{1}{\pi})^n\cdot[\frac{1}{1+(x_1-\theta)^2}]\cdot[\frac{1}{1+(x_2-\theta)^2}]\cdots[\frac{1}{1+(x_n-\theta)^2}] \\
+&= \pi^{-n}\cdot[1+(x_1-\theta)^2]^{-1}\cdot[1+(x_2-\theta)^2]^{-1}\cdots[1+(x_2-\theta)^2]^{-1} \\
+\end{aligned}
+$$
+
+So,
+
+$$
+\begin{aligned}
+l(\theta) &= \ln\left\{\pi^{-n}\cdot[1+(x_1-\theta)^2]^{-1}\cdot[1+(x_2-\theta)^2]^{-1}\cdots[1+(x_2-\theta)^2]^{-1}\right\} \\
+&= \ln\left(\pi^{-n}\right)+\sum_{i=1}^n\ln\left[1+(x_i-\theta)^2\right]^{-1} \\
+&= -n\ln\pi-\sum_{i=1}^n\ln\left[1+(x_i-\theta)^2\right] \\
+&= -n\ln\pi-\sum_{i=1}^n\ln\left[1+(\theta-x_i)^2\right] \\
+\end{aligned}
+$$
+
+First derivatives of log-likelihood function is:
+
+$$
+l'(\theta)=-\sum_{i=1}^n\frac{2\theta-2x_i}{1+(\theta-x_i)^2}=-2\sum_{i=1}^n\frac{\theta-x_i}{1+(\theta-x_i)^2}
+$$
+
+Second derivatives of log-likelihood function is:
+
+$$
+\begin{aligned}
+l''(\theta) &= -2\sum_{i=1}^n\frac{1+(\theta-x_i)^2-(\theta-x_i)(2\theta-2x_i)}{\left[1+(\theta-x_i)^2\right]^2} \\
+&= -2\sum_{i=1}^n\frac{1+(\theta-x_i)^2-2(\theta-x_i)^2}{\left[1+(\theta-x_i)^2\right]^2} \\
+&= -2\sum_{i=1}^n\frac{1-(\theta-x_i)^2}{\left[1+(\theta-x_i)^2\right]^2} \\
+\end{aligned}
+$$
+
+For Fisher information, note that $I(\theta)=nI_{x_1}(\theta)=nI_x(\theta)$, so,
+
+$$
+\begin{aligned}
+I(\theta) &= nE\left[\left(\frac{2(x-\theta)}{1+(x-\theta)^2}\right)^2\right] \\
+&= n\int_{-\infty}^\infty\left(\frac{2(x-\theta)}{1+(x-\theta)^2}\right)^2\frac{1}{\pi\left[1+(x-\theta)^2\right]}dx \\
+&= \frac{4n}{\pi}\int_{-\infty}^\infty\frac{(x-\theta)^2}{\left[1+(x-\theta)^2\right]^3}dx \\
+\end{aligned}
+$$
+
+So, it can be derived that $I(\theta)=n\int\frac{[p'(x)]^2}{p(x)}dx$.\
+
+Letting $u=x-\theta$ and $du=dx$,
+
+$$
+I(\theta)=\frac{4n}{\pi}\int_{-\infty}^\infty\frac{u^2}{\left[1+u^2\right]^3}du=\frac{8n}{\pi}\int_0^\infty\frac{u^2}{\left[1+u^2\right]^3}du=\frac{8n}{\pi}\int_0^\infty\frac{u^2}{1+u^2}\left(\frac{1}{1+u^2}\right)^2du
+$$
+
+Substituting $x=1/(1+u^2)$, $u=(1/x-1)^{1/2}$ and $du=\frac{1}{2}(1/x-1)^{-1/2}(-1/x^2)$, $I(\theta)$ can be expressed as:
+
+$$
+\begin{aligned}
+I(\theta) &= \frac{8n}{\pi}\int_0^\infty\frac{u^2}{1+u^2}\left(\frac{1}{1+u^2}\right)^2du=\frac{8n}{\pi}\int_0^1(1-x)x^2\cdot(1/2)(1/x-1)^{-1/2}(-1/x^2)dx \\
+&= \frac{4n}{\pi}\int_0^1x^{\frac{1}{2}}(1-x)^{\frac{1}{2}}dx=\frac{4n}{\pi}\int_0^1x^{\frac{3}{2}-1}(1-x)^{\frac{3}{2}-1}dx=\frac{4n}{\pi}\cdot\frac{(0.5\sqrt\pi)^2}{2\times1}=\frac{n}{2} \\
+\end{aligned}
+$$
+
+## Part (b)
+
+Graph of log-likelihood function and Table containing results for different starting points are shown as:
+
+```{r, echo=FALSE}
+x <- c(1.77, -0.23, 2.76, 3.80, 3.47, 56.75, -1.34, 4.24, -2.44,
+       3.29, 3.71, -2.40, 4.53, -0.07, -1.05, -13.87, -2.53, -1.75)
+n <- length(x)
+loglik <- function(theta) {-n*log(pi)-sum (log(1+(x-theta)^2))}
+S <- seq(-40, 40, len=1000)
+loglik_S <- sapply(S, loglik)
+plot(S, loglik_S, type ="l", xlab=expression(theta), ylab=expression(logL(theta)),
+     main="Graph of log-likelihood function", cex.main=0.75)
+```
+
+
+
+```{r, echo=FALSE}
+x <- c(1.77, -0.23, 2.76, 3.80, 3.47, 56.75, -1.34, 4.24, -2.44,
+       3.29, 3.71, -2.40, 4.53, -0.07, -1.05, -13.87, -2.53, -1.75)
+n <- length(x)
+loglik <- function(theta) {-n*log(pi)-sum (log(1+(x-theta)^2))}
+mle <- function(theta0, toler=1e-08) {     
+  theta <- theta0
+  dloglik <- sum(2*(x-theta)/(1+(x-theta)^2))
+  
+  while (abs(dloglik) > toler) {
+    ddloglik <- 2*sum(((x-theta)^2-1)/(1+(x-theta)^2)^2)
+    theta <- theta-dloglik/ddloglik
+    dloglik <- sum(2*(x-theta)/(1+(x-theta)^2))
+  }
+  theta
+}
+IV <- c(-11, -1, 0, 1.5, 4, 4.7, 7, 8, 38, mean(x))
+Result <- as.matrix(sapply(IV, mle))
+Result_table <- cbind(as.matrix(IV), Result)
+colnames(Result_table) <- c("**Initial value**", "**MLE for theta**")
+knitr::kable(
+  Result_table, digits=5, align = c(rep('c', 5)), 
+  caption = "MLE for theta using Newton-Raphson method"
+  )
+```
+
+From the table, it can be observed that for initial values -1, 0 and 4.7, MLE for $\theta$ can be found to be -0.59147 through Newton-Raphson method. For initial values 1.5, 4 and $\overline{x}$, the results converge to the local maximum values. Therefore, 1.5, 4 and sample mean are not good starting points. In addition, for initial values -11, 7, 8 and 38, outputs of each step do not show the convergency. Hence, these values should not chosen as starting points either.
+
+## Part (c)
+
+Results for different starting points are displayed in the following table with maximum iteration set to be 1000,
+
+```{r, echo=FALSE}
+x <- c(1.77, -0.23, 2.76, 3.80, 3.47, 56.75, -1.34, 4.24, -2.44,
+       3.29, 3.71, -2.40, 4.53, -0.07, -1.05, -13.87, -2.53, -1.75)
+n <- length(x)
+loglik <- function(theta) {-n*log(pi)-sum (log(1+(x-theta)^2))}
+mle <- function(theta0, alpha, toler=1e-08) {     
+  theta <- theta0
+  dloglik <- sum(2*(x-theta)/(1+(x-theta)^2))
+  i <- 1 
+  while (abs(dloglik) > toler) {
+    ddloglik <- 2*sum(((x-theta)^2-1)/(1+(x-theta)^2)^2)
+    theta <- theta+dloglik*alpha
+    dloglik <- sum(2*(x-theta)/(1+(x-theta)^2))
+    i <- i+1
+    if (i >= 1000) return("Maximum iterations reached")
+  }
+  theta
+}
+Result <- matrix(NA, 9, 3)
+IV <- as.matrix(c(-11, -1, 0, 1.5, 4, 4.7, 7, 8, 38))
+alpha_set <- t(as.matrix(c(1, 0.64, 0.25)))
+for (j in 1:3) {
+  for (m in 1:9){
+    Result[m,j] <- mle(IV[m,1], alpha_set[1,j])
+  }
+}
+Result_table <- cbind(as.matrix(IV), Result)
+colnames(Result_table) <- c("**Initial value**", "**alpha=1**",
+                            "**alpha=0.64**","**alpha=0.25**")
+knitr::kable(
+  Result_table, digits=5, align = c(rep('c', 5)), 
+  caption = "MLE for theta using Fixed-point iterations"
+)
+```
+
+## Part (d)
+
+Results for different starting points are displayed in the following table:
+
+```{r, echo=FALSE}
+x <- c(1.77, -0.23, 2.76, 3.80, 3.47, 56.75, -1.34, 4.24, -2.44,
+       3.29, 3.71, -2.40, 4.53, -0.07, -1.05, -13.87, -2.53, -1.75)
+n <- length(x)
+loglik <- function(theta) {-n*log(pi)-sum(log(1+(x-theta)^2))}
+mle <- function(theta0, toler=1e-08) {     
+  theta <- theta0
+  dloglik <- sum(2*(x-theta)/(1+(x-theta)^2))
+  i <- 1
+  
+  while (abs(dloglik) > toler) {
+      theta <- theta + dloglik/(n/2)
+      dloglik <- sum(2*(x-theta)/(1+(x-theta)^2))
+      i <- i+1
+      if (i >= 1000) return(theta)
+  }
+  dloglik <- sum(2*(x-theta)/(1+(x-theta)^2))
+  
+  if (abs(dloglik) > toler)
+    repeat {
+      ddloglik <- 2*sum(((x-theta)^2-1)/(1+(x-theta)^2)^2)
+      theta <- theta-dloglik/ddloglik
+      dloglik <- sum(2*(x-theta)/(1+(x-theta)^2)) 
+    }
+  theta
+}
+IV <- c(-11, -1, 0, 1.5, 4, 4.7, 7, 8, 38)
+Result <- as.matrix(sapply(IV, mle))
+Result_table <- cbind(as.matrix(IV), Result)
+colnames(Result_table) <- c("**Initial value**", "**MLE for theta**")
+knitr::kable(
+  Result_table, digits=5, align = c(rep('c', 5)), 
+  caption = "MLE for theta using Fisher scoring and Newton method"
+  )
+```
+
+## Part (e)
+
+For computation methods used in Part (a), Part (b) and Part(c), calculation time are respectively 0.184489 secs, 0.233618 secs and 0.2210901 secs. The difference of calculation time is relatively small among these three methods. However, by comparing the calculated results, it can be found that Newton method converges relatively slowly and choice of starting points has great influence on whether MLE values of $\theta$ can be derived correctly. For Fixed-point interation, it converges relatively quickly while the $\alpha$ value is important for convergency. If a proper $\alpha$ is chosen, Fixed-point interation can be an efficient computation method. The combination of Fisher scoring and Newton method converges most efficiently among these three methods and is considered to be the best choice for this question. Based on the log-likelihood graph, since there are two local maximum values, initial value of $\theta_0$ are critical to all three methods so that proper initial values should be selected.
+
+# Question 2
+
+## Part (a)
+
+Log-likelihood function is:
+
+$$
+l(\theta)=\log\frac{1-\cos(x-\theta)}{2\pi}=\log\left[1-\cos(x-\theta)\right]-\log(2\pi)
+$$
+
+Graph of log-likelihood function is shown as:
+
+```{r, echo=FALSE}
+x <- c(3.91, 4.85, 2.28, 4.06, 3.70, 4.04, 5.46, 3.53, 2.28, 1.96,
+       2.53, 3.88, 2.22, 3.47, 4.82, 2.46, 2.99, 2.54, 0.52)
+loglik <- function(theta) sum(log(1-cos(x-theta)))-log(2*pi)
+S <- seq(-pi, pi, len=1000)
+loglik_S <- sapply(S, loglik)
+plot(S, loglik_S, type="l", xlab=expression(theta), ylab=expression(logL(theta)),
+     main="Graph of log-likelihood function", cex.main=0.75)
+```
+
+## Part (b)
+
+According to the question, $\mathbb{E}\left[X\mid\theta\right]=\overline{x}$. Since $\mathbb{E}\left[X\mid\theta\right]=\left.\int\right.xf(x)dx$,
+
+$$
+\overline{x}=\frac{1}{2\pi}\int_0^{2\pi}x\left[1-\cos(x-\theta)\right]dx=\pi-\frac{1}{2\pi}\int_0^{2\pi}x\cos(x-\theta)dx
+$$
+
+Using integration by parts, it can be obrained that,
+
+$$
+\int_0^{2\pi}x\cos(x-\theta)dx=\left.x\sin(x-\theta)\right|_{x=0}^{2\pi}-\int_0^{2\pi}\sin(x-\theta)dx=2\pi\sin(2\pi-\theta)
+$$
+
+Since $\sin(-x)=\sin(x)$ and $\sin(2\pi+x)=\sin(x)$, $\overline{x}$ can be calculated and $\theta$ is:
+
+$$
+\overline{x}=\pi-\frac{1}{2\pi}\int_0^{2\pi}x\cos(x-\theta)dx=\pi+\sin\theta\iff\theta=\arcsin(\overline{x}-\pi)
+$$
+
+Therefore, 
+
+$$
+\hat{\theta}_{moment}=\arcsin(\overline{x}-\pi)=0.0954
+$$
+
+## Part (c) and (d)
+
+MLEs for $\theta$ at $\theta_0=\hat{\theta}_{moment},-2.7,2.7$ are presented as:
+
+```{r, echo=FALSE}
+x <- c(3.91, 4.85, 2.28, 4.06, 3.70, 4.04, 5.46, 3.53, 2.28, 1.96,
+       2.53, 3.88, 2.22, 3.47, 4.82, 2.46, 2.99, 2.54, 0.52)
+loglik <- function(theta) sum(log(1-cos(x-theta)))-log(2*pi)
+mme <- asin(mean(x)-pi)
+mle <- function(theta0, toler=1e-08) {     
+  theta <- theta0
+  dloglik <- -sum(sin(x-theta)/(1-cos(x-theta)))
+  
+  while (abs(dloglik) > toler) {
+    ddloglik <- -sum(1/(1-cos(x-theta)))
+    theta <- theta-dloglik/ddloglik
+    dloglik <- -sum(sin(x-theta)/(1-cos(x-theta)))
+  }
+  theta
+}
+IV <- c(mme, -2.7, 2.7)
+Result <- as.matrix(c(mle(mme), mle(-2.7), mle(2.7)))
+Result_table <- cbind(as.matrix(IV), Result)
+colnames(Result_table) <- c("**Initial value**", "**MLE for theta**")
+knitr::kable(
+  Result_table, digits=5, align = c(rep('c', 5)), 
+  caption = "MLE for theta"
+  )
+```
+
+## Part (e)
+
+Interval $[-\pi,\pi]$ can be partitioned into several subintervals $A_i$ based on the standard that $\theta\in\left.A_i\right.$ if and only if $\theta_0=\theta$ suggests $\theta_t=\hat{\theta}_i$. Estimations of the upper and lower bounds of the corresponding $A_i$ at different $\hat{\theta}_i$ are demonstrated in the forrlowing table:
+
+```{r, echo=FALSE}
+x <- c(3.91, 4.85, 2.28, 4.06, 3.70, 4.04, 5.46, 3.53, 2.28, 1.96,
+       2.53, 3.88, 2.22, 3.47, 4.82, 2.46, 2.99, 2.54, 0.52)
+loglik <- function(theta) sum(log(1-cos(x-theta)))-log(2*pi)
+mle <- function(theta0, toler=1e-08) {     
+  theta <- theta0
+  dloglik <- -sum(sin(x-theta)/(1-cos(x-theta)))
+  
+  while (abs(dloglik) > toler) {
+    ddloglik <- -sum(1/(1-cos(x-theta)))
+    theta <- theta-dloglik/ddloglik
+    dloglik <- -sum(sin(x-theta)/(1-cos(x-theta)))
+  }
+  theta
+}
+M <- seq(-pi, pi, len=200)
+N <- function(theta) round(mle(theta), 4)
+theta_value <- sapply(M, N)
+soln <- split(M, theta_value)
+min_value <- sapply(soln, min)
+max_value <- sapply(soln, max)
+Result_partition <- cbind(round(min_value, 5), round(max_value, 5))
+colnames(Result_partition) <- c("**Lower**", "**Upper**")
+knitr::kable(
+  Result_partition, align = c(rep('c', 5)), 
+  caption = " Partition of the interval"
+  )
+```
+
+# Question 3
+
+## Part (a)
+
+The main idea of Gauss-Newton is to approximate the function $f_{\theta}(t)$ by alinear function. In this question, partial derivatives of $f_{\theta}$ with respect to $K$ and $r$ are calculated to derive the gradient vector:
+
+$$
+\frac{\partial\left.f_{\theta}(t)\right.}{\partial\left.K\right.}=\frac{N_0^2(1-e^{-rt})}{\left[N_0(1-e^{-rt})+Ke^{-rt}\right]^2}
+$$
+
+$$
+\frac{\partial\left.f_{\theta}(t)\right.}{\partial\left.r\right.}=\frac{tKN_0(K-N_0)e^{-rt}}{\left[N_0(1-e^{-rt})+Ke^{-rt}\right]^2}
+$$
+
+So, the gradient vector $g_i$ is:
+
+$$
+g_i=\left[\frac{1}{N_0(1-e^{-rt_i})+Ke^{-rt_i}}\right]^2\left(N_0^2(1-e^{-rt_i}),t_iKN_0(K-N_0)e^{-rt_i}\right)^\mathrm{T}
+$$
+
+and the residual at each iteration is:
+$$
+z_i=N_i-f_{\theta}(t_i)
+$$
+
+Let $G$ be the matrix of $g_i$ as its $i-th$ row, $\theta_{t+1}$ can be expressed as:
+
+$$
+\theta_{t+1}=\theta_t+(G_t^\mathrm{T}G_t)^{-1}G_t^\mathrm{T}z_t
+$$
+
+Least-squares estimates of $K$ and $r$ with initial values $(800, 0.1)$ are:
+
+```{r, echo=FALSE}
+D <- c(0, 8, 28, 41, 63, 69, 97, 117, 135, 154)
+B <- c(2, 47, 192, 256, 768, 896, 120, 896, 1184, 1024)
+N0 <- B[1]
+n <- length(B)
+gauss_newton <- function(y, f, df, x, eps=1e-08, maxiter=1000, ...) {
+  fx <- f(x, ...)
+  dfx <- df(x, ...)
+  i <- 0
+  repeat {
+    i <- i+1
+    x_new <- x+ginv(t(dfx) %*% dfx) %*% t(dfx) %*% (y-fx)
+    if(mean(abs(x_new-x)) < eps || i >= maxiter) {
+      if(i >= maxiter) warning("Maximum number of iterations reached")
+      break
+    }
+    x <- x_new
+    fx <- f(x_new, ...)
+    dfx <- df(x_new, ...)
+  }
+  return(as.numeric(x_new))
+}
+f <- function(u) {
+  K <- u[1]
+  r <- u[2]
+  return(K*N0/(N0+(K-N0)*exp(-r*D)))
+}
+df <- function(u) {
+  fu <- f(u)
+  K <- u[1]
+  r <- u[2]
+  o1 <- fu*(1-fu*exp(-r*D))/K
+  o2 <- fu**2*(K-N0)*D*exp(-r*D)/K/N0
+  return(matrix(c(o1, o2), nrow=n, ncol=2, byrow=FALSE))
+}
+o_gn <- t(as.matrix(gauss_newton(B, f, df, c(800, 0.1))))
+colnames(o_gn) <- c("**LSE of K**", "**LSE of r**")
+knitr::kable(
+  o_gn, digits=5, align = c(rep('c', 5)), 
+  caption = "LSE values of K and r"
+  )
+```
+
+## Part (b)
+
+Contour plot is presented as:
+
+```{r, echo=FALSE}
+D <- c(0, 8, 28, 41, 63, 69, 97, 117, 135, 154)
+B <- c(2, 47, 192, 256, 768, 896, 120, 896, 1184, 1024)
+N0 <- B[1]
+n <- length(B)
+gauss_newton <- function(y, f, df, x, eps=1e-08, maxiter=1000, ...) {
+  fx <- f(x, ...)
+  dfx <- df(x, ...)
+  i <- 0
+  repeat {
+    i <- i+1
+    x_new <- x+ginv(t(dfx) %*% dfx) %*% t(dfx) %*% (y-fx)
+    if(mean(abs(x_new-x)) < eps || i >= maxiter) {
+      if(i >= maxiter) warning("Maximum number of iterations reached")
+      break
+    }
+    x <- x_new
+    fx <- f(x_new, ...)
+    dfx <- df(x_new, ...)
+  }
+  return(list(x=as.numeric(x_new), fx=f(x_new, ...)))
+}
+f <- function(u) {
+  K <- u[1]
+  r <- u[2]
+  return(K*N0/(N0+(K-N0)*exp(-r*D)))
+}
+df <- function(u) {
+  fu <- f(u)
+  K <- u[1]
+  r <- u[2]
+  o1 <- fu*(1-fu*exp(-r*D))/K
+  o2 <- fu**2*(K-N0)*D*exp(-r*D)/K/N0
+  return(matrix(c(o1, o2), nrow=n, ncol=2, byrow=FALSE))
+}
+o_gn <- gauss_newton(B, f, df, c(800, 0.1))
+g <- function(t) {o_gn$x[1] * N0 / (N0 + (o_gn$x[1] - N0) * exp(-o_gn$x[2] * t))}
+k <- seq(750, 900, by=5)
+r <- seq(0.05, 0.2, by=0.025)
+Q <- 0 * outer(k, r)
+for(i in seq_along(k)) {
+  for(j in seq_along(r)) {
+    Q[i, j] <- -sum((B - f(c(k[i], r[j])))**2)
+    }
+}
+plot(xy.coords(0, 0), xlim=range(k), ylim=range(r), xlab="K", ylab="r")
+contour(k, r, Q, lty="solid", add=TRUE, nlevels=15)
+```
+
+## Part (c)
+
+According to the question, it can be derived that:
+
+$$
+\log(N_t)\sim(\log\left[\frac{KN_0}{N_0+(K-N_0)e^{-rt}}\right],\sigma^2)
+$$
+
+So, using the bbmle.mle2() function in R, maximum likelihood estimators of $K$, $r$, $\sigma^2$ with initial value $(500,0.5,0.5)$ and the variance of these estimations are:
+
+```{r, echo=FALSE}
+D <- c(0, 8, 28, 41, 63, 69, 97, 117, 135, 154)
+B <- c(2, 47, 192, 256, 768, 896, 120, 896, 1184, 1024)
+N0 <- B[1]
+fit <- mle2(log(N)~dnorm(mean=log((K*N0)/(N0+(K-N0)*exp(-r*t))), sd=sqrt(var)), 
+            start=list(K=500, r=0.5, var=0.5), data=list(t=D, N=B))
+summary <- coef(summary(fit))
+knitr::kable(
+  summary, digits=5, align = c(rep('c', 5)), 
+  caption = "MLE and the variance summary"
+)
+```
+
+
+
+
+
+
+
+
